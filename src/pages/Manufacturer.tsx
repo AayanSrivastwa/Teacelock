@@ -32,7 +32,7 @@ export default function Manufacturer() {
       // Timestamp
       const timestamp = new Date().toISOString();
 
-      // Generate SHA-256 hash
+      // Generate product hash
       const productHash = generateProductHash(
         newProductCode,
         name.trim(),
@@ -40,7 +40,7 @@ export default function Manufacturer() {
         timestamp
       );
 
-      // 1️⃣ Create product
+      // Create product
       const { data: product, error: productError } =
         await supabase
           .from("products")
@@ -59,7 +59,7 @@ export default function Manufacturer() {
         throw productError;
       }
 
-      // 2️⃣ Create first supply-chain event
+      // Create first supply-chain event
       const { error: eventError } = await supabase
         .from("supply_chain_events")
         .insert({
@@ -67,20 +67,21 @@ export default function Manufacturer() {
           event_type: "MANUFACTURED",
           location: location.trim(),
           actor_name: "Manufacturer",
-          notes: "Product manufactured and registered with TeaceLock.",
+          notes:
+            "Product manufactured and registered with TeaceLock.",
         });
 
       if (eventError) {
         throw eventError;
       }
 
-      // Success
       setMessage(
-        "Product registered and supply-chain event created successfully!"
+        "Product registered successfully!"
       );
 
       setProductCode(newProductCode);
 
+      // Clear form
       setName("");
       setBrand("");
       setLocation("");
@@ -96,7 +97,7 @@ export default function Manufacturer() {
     <main>
       <h1>Manufacturer Dashboard 🏭</h1>
 
-      <div>
+      <section>
         <h2>Register New Product</h2>
 
         <input
@@ -133,14 +134,16 @@ export default function Manufacturer() {
           onClick={registerProduct}
           disabled={loading}
         >
-          {loading ? "Registering..." : "Register Product"}
+          {loading
+            ? "Registering..."
+            : "Register Product"}
         </button>
 
         {message && <p>{message}</p>}
-      </div>
+      </section>
 
       {productCode && (
-        <div>
+        <section>
           <h2>Product Registered 🎉</h2>
 
           <p>
@@ -148,8 +151,10 @@ export default function Manufacturer() {
             <strong>{productCode}</strong>
           </p>
 
-          <ProductQR productCode={productCode} />
-        </div>
+          <ProductQR
+            productCode={productCode}
+          />
+        </section>
       )}
     </main>
   );

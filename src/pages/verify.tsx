@@ -11,38 +11,69 @@ interface Product {
     created_at: string;
 }
 
+interface SupplyChainEvent {
+    id: string;
+    product_id: string;
+    event_type: string;
+    location: string | null;
+    actor_name: string | null;
+    notes: string | null;
+    created_at: string;
+}
+
 export default function Verify() {
     const [product, setProduct] = useState<Product | null>(null);
+    const [events, setEvents] = useState<SupplyChainEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
         const verifyProduct = async () => {
-            // Get product code from URL
             const params = new URLSearchParams(
                 window.location.search
             );
 
             const code = params.get("code");
 
-            // No product code
             if (!code) {
                 setNotFound(true);
                 setLoading(false);
                 return;
             }
 
-            // Search product in Supabase
-            const { data, error } = await supabase
-                .from("products")
-                .select("*")
-                .eq("product_code", code)
-                .single();
+            // Get product
+            const { data: productData, error: productError } =
+                await supabase
+                    .from("products")
+                    .select("*")
+                    .eq("product_code", code)
+                    .single();
 
-            if (error || !data) {
+            if (productError || !productData) {
                 setNotFound(true);
+                setLoading(false);
+                return;
+            }
+
+            setProduct(productData);
+
+            // Get supply chain history
+            const { data: eventData, error: eventError } =
+                await supabase
+                    .from("supply_chain_events")
+                    .select("*")
+                    .eq("product_id", productData.id)
+                    .order("created_at", {
+                        ascending: true,
+                    });
+
+            if (eventError) {
+                console.error(
+                    "Supply chain error:",
+                    eventError
+                );
             } else {
-                setProduct(data);
+                setEvents(eventData || []);
             }
 
             setLoading(false);
@@ -51,7 +82,6 @@ export default function Verify() {
         verifyProduct();
     }, []);
 
-    // Loading
     if (loading) {
         return (
             <main>
@@ -62,34 +92,31 @@ export default function Verify() {
         );
     }
 
-    // Product not found
     if (notFound) {
         return (
             <main>
                 <h1>TeaceLock 🔐</h1>
 
-                <div>
-                    <h2>❌ Product Not Found</h2>
+                <h2>❌ Product Not Found</h2>
 
-                    <p>
-                        This product could not be verified.
-                    </p>
+                <p>
+                    This product could not be verified.
+                </p>
 
-                    <p>
-                        The product code does not exist
-                        in the TeaceLock database.
-                    </p>
-                </div>
+                <p>
+                    The product code does not exist in the
+                    TeaceLock database.
+                </p>
             </main>
         );
     }
 
-    // Product found
     return (
         <main>
             <h1>TeaceLock 🔐</h1>
 
-            <div>
+            {/* Product verification */}
+            <section>
                 <h2>✅ Product Verified</h2>
 
                 <h3>{product?.name}</h3>
@@ -108,22 +135,104 @@ export default function Verify() {
                     <strong>Status:</strong>{" "}
                     {product?.status}
                 </p>
+            </section>
 
-                <p>
-                    <strong>Registered On:</strong>{" "}
-                    {new Date(
-                        product!.created_at
-                    ).toLocaleString()}
-                </p>
+            <hr />
 
-                <p>
-                    <strong>Product Hash:</strong>
-                </p>
+            {/* Supply chain */}
+            <section>
+                <h2>📦 Supply Chain Journey</h2>
+
+                {events.length === 0 ? (
+                    <p>
+                        No supply chain events recorded yet.
+                    </p>
+                ) : (
+                    events.map((event, index) => (
+                        <div key={event.id}>
+                            <h3>
+                                {index + 1}.{" "}
+                                {getEventIcon(event.event_type)}{" "}
+                                {formatEventType(event.event_type)}
+                            </h3>
+
+                            {event.actor_name && (
+                                <p>
+                                    <strong>Actor:</strong>{" "}
+                                    {event.actor_name}
+                                </p>
+                            )}
+
+                            {event.location && (
+                                <p>
+                                    <strong>Location:</strong>{" "}
+                                    {event.location}
+                                </p>
+                            )}
+
+                            {event.notes && (
+                                <p>
+                                    <strong>Details:</strong>{" "}
+                                    {event.notes}
+                                </p>
+                            )}
+
+                            <p>
+                                <strong>Date:</strong>{" "}
+                                {new Date(
+                                    event.created_at
+                                ).toLocaleString()}
+                            </p>
+
+                            {index < events.length - 1 && (
+                                <p>↓</p>
+                            )}
+                        </div>
+                    ))
+                )}
+            </section>
+
+            <hr />
+
+            {/* Hash */}
+            <section>
+                <h2>🔐 Product Hash</h2>
 
                 <code>
                     {product?.product_hash}
                 </code>
-            </div>
+            </section>
         </main>
     );
+}
+
+function formatEventType(type: string) {
+    return type
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) =>
+            char.toUpperCase()
+        );
+}
+
+function getEventIcon(type: string) {
+    switch (type) {
+        case "MANUFACTURED":
+            return "🏭";
+
+        case "DISPATCHED":
+            return "🚚";
+
+        case "RECEIVED":
+            return "📦";
+
+        case "RETAILER_RECEIVED":
+            return "🏪";
+
+        case "SOLD":
+            return "🛒";
+
+        default:
+            return "📍";
+    }
 }
