@@ -107,7 +107,7 @@ export default function Manufacturer() {
       // 6. Success
       // --------------------------------
       setMessage(
-        "Product registered successfully!"
+        "Product registered successfully! QR code generated."
       );
 
       setProductCode(newProductCode);
