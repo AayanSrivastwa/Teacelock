@@ -16,6 +16,7 @@ export default function Manufacturer() {
   const [productCode, setProductCode] = useState("");
 
   const registerProduct = async () => {
+    // Validate fields
     if (!name.trim() || !brand.trim() || !location.trim()) {
       setMessage("Please fill all fields.");
       return;
@@ -26,13 +27,19 @@ export default function Manufacturer() {
     setProductCode("");
 
     try {
-      // Generate product code
+      // --------------------------------
+      // 1. Generate Product Code
+      // --------------------------------
       const newProductCode = generateProductCode();
 
-      // Timestamp
+      // --------------------------------
+      // 2. Generate Timestamp
+      // --------------------------------
       const timestamp = new Date().toISOString();
 
-      // Generate product hash
+      // --------------------------------
+      // 3. Generate SHA-256 Hash
+      // --------------------------------
       const productHash = generateProductHash(
         newProductCode,
         name.trim(),
@@ -40,7 +47,9 @@ export default function Manufacturer() {
         timestamp
       );
 
-      // Create product
+      // --------------------------------
+      // 4. Insert Product
+      // --------------------------------
       const { data: product, error: productError } =
         await supabase
           .from("products")
@@ -55,26 +64,48 @@ export default function Manufacturer() {
           .select()
           .single();
 
+      // Check product error
       if (productError) {
-        throw productError;
+        console.error(
+          "Product insertion error:",
+          productError
+        );
+
+        throw new Error(
+          `Product creation failed: ${productError.message}`
+        );
       }
 
-      // Create first supply-chain event
-      const { error: eventError } = await supabase
-        .from("supply_chain_events")
-        .insert({
-          product_id: product.id,
-          event_type: "MANUFACTURED",
-          location: location.trim(),
-          actor_name: "Manufacturer",
-          notes:
-            "Product manufactured and registered with TeaceLock.",
-        });
+      // --------------------------------
+      // 5. Create Supply Chain Event
+      // --------------------------------
+      const { error: eventError } =
+        await supabase
+          .from("supply_chain_events")
+          .insert({
+            product_id: product.id,
+            event_type: "MANUFACTURED",
+            location: location.trim(),
+            actor_name: "Manufacturer",
+            notes:
+              "Product manufactured and registered with TeaceLock.",
+          });
 
+      // Check event error
       if (eventError) {
-        throw eventError;
+        console.error(
+          "Supply chain event error:",
+          eventError
+        );
+
+        throw new Error(
+          `Product created, but supply-chain event failed: ${eventError.message}`
+        );
       }
 
+      // --------------------------------
+      // 6. Success
+      // --------------------------------
       setMessage(
         "Product registered successfully!"
       );
@@ -85,9 +116,22 @@ export default function Manufacturer() {
       setName("");
       setBrand("");
       setLocation("");
+
     } catch (error) {
-      console.error("Registration error:", error);
-      setMessage("Failed to register product.");
+      console.error(
+        "Registration error:",
+        error
+      );
+
+      // Show exact error
+      if (error instanceof Error) {
+        setMessage(`Error: ${error.message}`);
+      } else {
+        setMessage(
+          "An unknown error occurred."
+        );
+      }
+
     } finally {
       setLoading(false);
     }
@@ -100,36 +144,67 @@ export default function Manufacturer() {
       <section>
         <h2>Register New Product</h2>
 
-        <input
-          type="text"
-          placeholder="Product Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        {/* Product Name */}
+        <div>
+          <label>
+            Product Name
+          </label>
+
+          <br />
+
+          <input
+            type="text"
+            placeholder="e.g. Air Max 95"
+            value={name}
+            onChange={(e) =>
+              setName(e.target.value)
+            }
+          />
+        </div>
 
         <br />
+
+        {/* Brand */}
+        <div>
+          <label>
+            Brand
+          </label>
+
+          <br />
+
+          <input
+            type="text"
+            placeholder="e.g. Nike"
+            value={brand}
+            onChange={(e) =>
+              setBrand(e.target.value)
+            }
+          />
+        </div>
+
         <br />
 
-        <input
-          type="text"
-          placeholder="Brand"
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-        />
+        {/* Location */}
+        <div>
+          <label>
+            Manufacturing Location
+          </label>
+
+          <br />
+
+          <input
+            type="text"
+            placeholder="e.g. Delhi"
+            value={location}
+            onChange={(e) =>
+              setLocation(e.target.value)
+            }
+          />
+        </div>
 
         <br />
-        <br />
 
-        <input
-          type="text"
-          placeholder="Manufacturing Location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-        />
-
-        <br />
-        <br />
-
+        {/* Register Button */}
         <button
           onClick={registerProduct}
           disabled={loading}
@@ -139,16 +214,24 @@ export default function Manufacturer() {
             : "Register Product"}
         </button>
 
-        {message && <p>{message}</p>}
+        {/* Message */}
+        {message && (
+          <p>{message}</p>
+        )}
       </section>
 
+      {/* Generated Product */}
       {productCode && (
         <section>
-          <h2>Product Registered 🎉</h2>
+          <h2>
+            Product Registered 🎉
+          </h2>
 
           <p>
             Product Code:{" "}
-            <strong>{productCode}</strong>
+            <strong>
+              {productCode}
+            </strong>
           </p>
 
           <ProductQR
