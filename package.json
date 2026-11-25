@@ -12,6 +12,7 @@
   "dependencies": {
     "@noble/hashes": "^2.4.0",
     "@supabase/supabase-js": "^2.112.4",
+    "ethers": "^6.17.0",
     "html5-qrcode": "^2.3.8",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.8",
