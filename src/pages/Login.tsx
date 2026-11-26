@@ -136,7 +136,7 @@ export default function Login() {
             </button>
 
             <div style={{ marginTop: "1.75rem", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              Protected by TeaceLock Multi-Tenant OAuth. Session tokens are signed via cryptographic state validation. Made by Aayan Srivastwa
+              Protected by TeaceLock Multi-Tenant OAuth. Session tokens are signed via cryptographic state validation.
             </div>
           </div>
         )}
